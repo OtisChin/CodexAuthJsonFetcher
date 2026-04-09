@@ -1,0 +1,23 @@
+{
+  "name": "codex-auth-json-fetcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Workers self-service pickup site for Codex auth JSON files.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typegen": "wrangler types"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "r2",
+    "kv"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "wrangler": "^4.81.0"
+  }
+}

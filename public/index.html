@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex Auth 文件自助提货</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <main class="hero-card">
+        <section class="hero-copy">
+          <div class="brand-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 2l7 3v5c0 4.7-2.8 9-7 10-4.2-1-7-5.3-7-10V5l7-3z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M9 12.2l2.2 2.3L15.8 10"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <p class="eyebrow">Codex Auth 文件自助提货</p>
+          <h1>按邮箱秒级提取 JSON</h1>
+          <p class="subcopy">
+            管理员上传 JSON、文件夹或 ZIP 后，系统会自动提取 JSON、建立邮箱索引，并通过
+            Cloudflare R2 + KV 提供高效下载。
+          </p>
+        </section>
+
+        <section class="panel">
+          <div class="tabs" role="tablist" aria-label="提货模式">
+            <button class="tab is-active" data-tab-target="single-panel" role="tab" type="button">
+              单个提取
+            </button>
+            <button class="tab" data-tab-target="batch-panel" role="tab" type="button">
+              批量提取
+            </button>
+            <button class="tab" data-tab-target="admin-panel" role="tab" type="button">
+              管理上传
+            </button>
+          </div>
+
+          <section class="tab-panel is-active" id="single-panel">
+            <form class="query-form" id="single-form">
+              <label class="field-label" for="single-input">邮箱或邮箱-----密码</label>
+              <div class="input-row">
+                <input
+                  id="single-input"
+                  name="input"
+                  type="text"
+                  placeholder="gongyun1989@hotmail.com-----wzqu9634"
+                  autocomplete="off"
+                  required
+                />
+                <button class="primary-button" type="submit">立即查询</button>
+              </div>
+              <p class="helper-text">系统会自动提取邮箱，并按 `gongyun1989_hotmail.com` 规则匹配云端文件。</p>
+            </form>
+            <div class="result-card" id="single-result"></div>
+          </section>
+
+          <section class="tab-panel" id="batch-panel">
+            <form class="stack-form" id="batch-form">
+              <label class="field-label" for="batch-input">每行一个邮箱，支持 email-----密码</label>
+              <textarea
+                id="batch-input"
+                name="input"
+                rows="8"
+                placeholder="gongyun1989@hotmail.com-----wzqu9634&#10;gengxun1989@hotmail.com"
+                required
+              ></textarea>
+              <button class="primary-button wide" type="submit">批量生成下载包</button>
+            </form>
+            <div class="result-card" id="batch-result"></div>
+          </section>
+
+          <section class="tab-panel" id="admin-panel">
+            <form class="stack-form" id="admin-form">
+              <label class="field-label" for="admin-token">管理员口令</label>
+              <input
+                id="admin-token"
+                name="adminToken"
+                type="password"
+                placeholder="输入 Cloudflare Secret 中配置的 ADMIN_TOKEN"
+                required
+              />
+
+              <label class="field-label" for="admin-files">文件上传</label>
+              <input
+                id="admin-files"
+                name="files"
+                type="file"
+                accept=".json,.zip,application/zip"
+                multiple
+              />
+
+              <label class="field-label" for="admin-folder">文件夹上传</label>
+              <input id="admin-folder" type="file" webkitdirectory directory multiple />
+
+              <p class="helper-text">
+                ZIP 和文件夹会自动筛出其中的 JSON；只有符合
+                `token_xxx_hotmail.com_时间戳.json` 规则的文件会被建立索引。
+              </p>
+
+              <button class="primary-button wide" type="submit">上传并建立索引</button>
+            </form>
+            <div class="result-card" id="admin-result"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

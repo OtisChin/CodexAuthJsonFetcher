@@ -1,0 +1,27 @@
+"$schema" = "./node_modules/wrangler/config-schema.json"
+
+name = "codex-auth-json-fetcher"
+main = "src/index.js"
+compatibility_date = "2026-04-09"
+
+[assets]
+binding = "ASSETS"
+directory = "./public"
+
+[[kv_namespaces]]
+binding = "AUTH_INDEX"
+id = "replace-with-your-kv-namespace-id"
+preview_id = "replace-with-your-kv-preview-id"
+
+[[r2_buckets]]
+binding = "AUTH_BUCKET"
+bucket_name = "replace-with-your-r2-bucket-name"
+preview_bucket_name = "replace-with-your-r2-preview-bucket-name"
+
+[vars]
+MAX_BATCH_ITEMS = "100"
+MAX_HISTORY_ITEMS = "20"
+BATCH_ZIP_TTL_SECONDS = "86400"
+
+[secrets]
+required = ["ADMIN_TOKEN"]
