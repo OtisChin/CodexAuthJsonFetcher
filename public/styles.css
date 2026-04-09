@@ -80,7 +80,7 @@ textarea {
 
 .hero-copy h1 {
   margin: 10px 0 0;
-  font-size: clamp(34px, 6vw, 56px);
+  font-size: clamp(30px, 5.5vw, 48px);
   line-height: 1.02;
   letter-spacing: -0.04em;
 }
@@ -240,7 +240,7 @@ textarea:focus {
   justify-content: center;
   gap: 14px;
   margin-top: 2px;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
 }
 
@@ -365,6 +365,6 @@ textarea:focus {
   .footer-note {
     flex-direction: column;
     gap: 6px;
-    font-size: 16px;
+    font-size: 14px;
   }
 }
