@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex认证文件上传</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <main class="hero-stack">
+        <section class="hero-copy">
+          <div class="brand-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 2l7 3v5c0 4.7-2.8 9-7 10-4.2-1-7-5.3-7-10V5l7-3z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M9 12.2l2.2 2.3L15.8 10"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <h1>Codex认证文件上传</h1>
+          <p class="subcopy">管理员通过此页面上传 JSON、ZIP 或文件夹内容，系统会自动抽取 JSON 并建立邮箱索引。</p>
+        </section>
+
+        <section class="panel">
+          <section class="upload-shell is-active">
+            <form class="stack-form" id="admin-form">
+              <label class="field-label" for="admin-token">管理员口令</label>
+              <input
+                id="admin-token"
+                name="adminToken"
+                type="password"
+                placeholder="输入 Cloudflare Secret 中配置的 ADMIN_TOKEN"
+                required
+              />
+
+              <label class="field-label" for="admin-files">文件上传</label>
+              <input
+                id="admin-files"
+                name="files"
+                type="file"
+                accept=".json,.zip,application/zip"
+                multiple
+              />
+
+              <label class="field-label" for="admin-folder">文件夹上传</label>
+              <input id="admin-folder" type="file" webkitdirectory directory multiple />
+
+              <p class="helper-text">
+                ZIP 和文件夹会自动筛出其中的 JSON；只有符合
+                `token_xxx_hotmail.com_时间戳.json` 规则的文件会被建立索引。
+              </p>
+
+              <button class="primary-button wide" type="submit">上传并建立索引</button>
+            </form>
+            <div class="result-card" id="admin-result"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

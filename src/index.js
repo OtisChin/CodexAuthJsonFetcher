@@ -15,6 +15,12 @@ export default {
         return await routeApi(request, env, url);
       }
 
+      if (url.pathname === "/upload") {
+        const uploadUrl = new URL(request.url);
+        uploadUrl.pathname = "/upload.html";
+        return env.ASSETS.fetch(new Request(uploadUrl, request));
+      }
+
       return env.ASSETS.fetch(request);
     } catch (error) {
       const isBindingError =

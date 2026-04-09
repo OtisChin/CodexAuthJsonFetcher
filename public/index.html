@@ -38,64 +38,41 @@
         </section>
 
         <section class="panel">
-          <div class="tabs" role="tablist" aria-label="功能切换">
-            <button class="tab is-active" data-tab-target="query-panel" role="tab" type="button">
-              文件提取
-            </button>
-            <button class="tab" data-tab-target="admin-panel" role="tab" type="button">
-              管理上传
-            </button>
-          </div>
-
-          <section class="tab-panel is-active" id="query-panel">
+          <section class="query-shell is-active" id="query-panel">
             <form class="query-form" id="query-form">
-              <label class="field-label" for="query-input">邮箱或邮箱-----密码</label>
+              <label class="field-label query-label" for="query-input">邮箱或邮箱-----密码</label>
               <div class="input-row">
-                <textarea
-                  id="query-input"
-                  name="input"
-                  rows="1"
-                  placeholder="example@gmail.com"
-                  autocomplete="off"
-                  required
-                ></textarea>
+                <div class="input-field">
+                  <span class="input-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M4 7.5h16c.8 0 1.5.7 1.5 1.5v6c0 .8-.7 1.5-1.5 1.5H4c-.8 0-1.5-.7-1.5-1.5V9C2.5 8.2 3.2 7.5 4 7.5z"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M4 9l8 5 8-5"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <textarea
+                    id="query-input"
+                    name="input"
+                    rows="1"
+                    placeholder="example@gmail.com"
+                    autocomplete="off"
+                    required
+                  ></textarea>
+                </div>
                 <button class="primary-button" type="submit">立即查询</button>
               </div>
             </form>
             <div class="result-card" id="query-result"></div>
-          </section>
-
-          <section class="tab-panel" id="admin-panel">
-            <form class="stack-form" id="admin-form">
-              <label class="field-label" for="admin-token">管理员口令</label>
-              <input
-                id="admin-token"
-                name="adminToken"
-                type="password"
-                placeholder="输入 Cloudflare Secret 中配置的 ADMIN_TOKEN"
-                required
-              />
-
-              <label class="field-label" for="admin-files">文件上传</label>
-              <input
-                id="admin-files"
-                name="files"
-                type="file"
-                accept=".json,.zip,application/zip"
-                multiple
-              />
-
-              <label class="field-label" for="admin-folder">文件夹上传</label>
-              <input id="admin-folder" type="file" webkitdirectory directory multiple />
-
-              <p class="helper-text">
-                ZIP 和文件夹会自动筛出其中的 JSON；只有符合
-                `token_xxx_hotmail.com_时间戳.json` 规则的文件会被建立索引。
-              </p>
-
-              <button class="primary-button wide" type="submit">上传并建立索引</button>
-            </form>
-            <div class="result-card" id="admin-result"></div>
           </section>
         </section>
       </main>

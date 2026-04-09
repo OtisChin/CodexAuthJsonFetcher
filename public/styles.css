@@ -39,31 +39,27 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px 56px;
+  padding: 72px 20px 72px;
 }
 
 .hero-stack {
-  width: min(980px, 100%);
+  width: min(860px, 100%);
   display: grid;
-  gap: 28px;
+  gap: 26px;
 }
 
 .hero-copy,
 .panel {
-  border: 1px solid var(--line);
   border-radius: 28px;
-  background: var(--panel);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
 }
 
 .hero-copy {
-  padding: 56px 36px 44px;
+  padding: 12px 24px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 18px;
+  gap: 16px;
 }
 
 .brand-badge {
@@ -84,60 +80,33 @@ textarea {
 
 .hero-copy h1 {
   margin: 0;
-  font-size: clamp(42px, 7vw, 72px);
+  font-size: clamp(40px, 7vw, 66px);
   line-height: 1.02;
   letter-spacing: -0.04em;
 }
 
 .subcopy {
   margin: 0;
-  max-width: 640px;
-  font-size: 16px;
-  line-height: 1.8;
+  max-width: 620px;
+  font-size: 15px;
+  line-height: 1.85;
   color: var(--muted);
 }
 
 .panel {
-  padding: 16px;
-}
-
-.tabs {
-  display: inline-grid;
-  grid-template-columns: repeat(2, minmax(140px, 180px));
-  gap: 12px;
-  margin: 0 auto 18px;
-}
-
-.tab {
-  border: 0;
-  border-radius: 16px;
-  padding: 15px 16px;
+  padding: 0;
   background: transparent;
-  color: var(--muted);
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+  box-shadow: none;
 }
 
-.tab:hover {
-  transform: translateY(-1px);
-}
-
-.tab.is-active {
-  background: var(--ink);
-  color: #ffffff;
-}
-
-.tab-panel {
-  display: none;
-  padding: 28px;
-  border-radius: 22px;
-  background: var(--panel-strong);
-  border: 1px solid rgba(16, 24, 39, 0.05);
-}
-
-.tab-panel.is-active {
-  display: block;
+.query-shell,
+.upload-shell {
+  padding: 18px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(16, 24, 39, 0.04);
+  box-shadow: 0 24px 48px rgba(16, 24, 39, 0.1);
+  backdrop-filter: blur(16px);
 }
 
 .query-form,
@@ -152,11 +121,49 @@ textarea {
   color: var(--ink);
 }
 
+.query-label {
+  display: none;
+}
+
 .input-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
+  padding: 18px;
+  border-radius: 30px;
+  background: #ffffff;
+  box-shadow: 0 20px 42px rgba(16, 24, 39, 0.08);
+}
+
+.input-field {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 66px;
+  padding: 0 16px;
+  border: 1px solid rgba(16, 24, 39, 0.08);
+  border-radius: 20px;
+  background: #f6f8fc;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.input-field:focus-within {
+  border-color: rgba(22, 196, 127, 0.42);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.input-icon {
+  display: inline-grid;
+  place-items: center;
+  color: #94a3b8;
+}
+
+.input-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 input[type="text"],
@@ -175,14 +182,18 @@ textarea {
 
 textarea {
   resize: vertical;
-  min-height: 74px;
+  min-height: 66px;
   line-height: 1.5;
 }
 
 #query-input {
-  min-height: 74px;
-  max-height: 210px;
+  min-height: 30px;
+  max-height: 190px;
   resize: vertical;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 18px 0 18px 0;
 }
 
 input:focus,
@@ -198,7 +209,8 @@ textarea:focus {
   background: var(--ink);
   color: white;
   font-weight: 800;
-  padding: 0 26px;
+  min-width: 176px;
+  padding: 0 30px;
   min-height: 60px;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
@@ -228,7 +240,6 @@ textarea:focus {
 }
 
 .result-card {
-  min-height: 96px;
   margin-top: 18px;
   border-radius: 20px;
   background: #f8fafc;
@@ -237,9 +248,7 @@ textarea:focus {
 }
 
 .result-card.is-empty {
-  display: grid;
-  place-items: center;
-  color: var(--muted);
+  display: none;
 }
 
 .result-card.is-success {
@@ -317,20 +326,21 @@ textarea:focus {
 
   .hero-copy,
   .panel,
-  .tab-panel {
+  .query-shell,
+  .upload-shell {
     padding: 20px;
   }
 
-  .tabs,
+  .hero-copy {
+    padding: 12px 8px 2px;
+  }
+
   .input-row {
     grid-template-columns: 1fr;
   }
 
-  .tabs {
-    width: 100%;
-  }
-
   .primary-button {
     width: 100%;
+    min-width: 0;
   }
 }
