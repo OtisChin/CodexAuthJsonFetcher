@@ -17,12 +17,14 @@ export default {
 
       return env.ASSETS.fetch(request);
     } catch (error) {
+      const isBindingError =
+        error instanceof Error && /binding .+ not configured/i.test(error.message);
       return jsonResponse(
         {
-          error: "server_error",
+          error: isBindingError ? "config_error" : "server_error",
           message: error instanceof Error ? error.message : "Unknown error",
         },
-        500,
+        isBindingError ? 503 : 500,
       );
     }
   },
@@ -164,6 +166,7 @@ async function handleBatchQuery(request, env) {
 
   const entries = {};
   const packedFiles = [];
+  const authBucket = getAuthBucket(env);
 
   for (const item of found) {
     const storageKey = getRecordStorageKey(item.record);
@@ -172,7 +175,7 @@ async function handleBatchQuery(request, env) {
       continue;
     }
 
-    const object = await env.AUTH_BUCKET.get(storageKey);
+    const object = await authBucket.get(storageKey);
     if (!object) {
       missing.push(item.email);
       continue;
@@ -206,7 +209,7 @@ async function handleBatchQuery(request, env) {
   const batchFilename = `auth-json-batch-${Date.now()}.zip`;
   const batchStorageKey = `batches/${Date.now()}-${crypto.randomUUID()}.zip`;
 
-  await env.AUTH_BUCKET.put(batchStorageKey, zipBytes, {
+  await authBucket.put(batchStorageKey, zipBytes, {
     httpMetadata: {
       contentType: ZIP_TYPE,
       contentDisposition: buildContentDisposition(batchFilename),
@@ -310,6 +313,7 @@ async function handleAdminUpload(request, env) {
 
   const nowIso = new Date().toISOString();
   const validItems = [];
+  const authBucket = getAuthBucket(env);
 
   for (const item of extractedItems) {
     const metadata = parseStoredJsonFilename(item.originalFilename);
@@ -349,7 +353,7 @@ async function handleAdminUpload(request, env) {
 
   await Promise.all(
     validItems.map((item) =>
-      env.AUTH_BUCKET.put(item.storageKey, item.bytes, {
+      authBucket.put(item.storageKey, item.bytes, {
         httpMetadata: {
           contentType: JSON_TYPE,
           contentDisposition: buildContentDisposition(item.originalFilename),
@@ -406,7 +410,8 @@ async function handleDownload(url, env) {
     return jsonResponse({ error: "invalid_key", message: "下载地址无效。" }, 400);
   }
 
-  const object = await env.AUTH_BUCKET.get(storageKey);
+  const authBucket = getAuthBucket(env);
+  const object = await authBucket.get(storageKey);
   if (!object) {
     return jsonResponse({ error: "not_found", message: "文件不存在或已过期。" }, 404);
   }
@@ -501,7 +506,8 @@ async function getIndexRecord(env, normalizedEmail) {
     return null;
   }
 
-  const raw = await env.AUTH_INDEX.get(buildIndexKey(normalizedEmail));
+  const authIndex = getAuthIndex(env);
+  const raw = await authIndex.get(buildIndexKey(normalizedEmail));
   if (!raw) {
     return null;
   }
@@ -589,6 +595,24 @@ function normalizeDownloadKey(storageKey) {
 
 function buildContentDisposition(filename) {
   return `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
+function getAuthIndex(env) {
+  const binding = env?.AUTH_INDEX;
+  if (!binding || typeof binding.get !== "function" || typeof binding.put !== "function") {
+    throw new Error("Cloudflare KV binding AUTH_INDEX is not configured.");
+  }
+
+  return binding;
+}
+
+function getAuthBucket(env) {
+  const binding = env?.AUTH_BUCKET;
+  if (!binding || typeof binding.get !== "function" || typeof binding.put !== "function") {
+    throw new Error("Cloudflare R2 binding AUTH_BUCKET is not configured.");
+  }
+
+  return binding;
 }
 
 function corsHeaders() {

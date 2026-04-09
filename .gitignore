@@ -6,3 +6,4 @@ coverage/
 *.tmp
 .dev.vars*
 .env*
+wrangler.local.toml
