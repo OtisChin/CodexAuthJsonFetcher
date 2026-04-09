@@ -59,7 +59,7 @@ textarea {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 16px;
+  gap: 24px;
 }
 
 .brand-badge {
@@ -79,7 +79,7 @@ textarea {
 }
 
 .hero-copy h1 {
-  margin: 0;
+  margin: 10px 0 0;
   font-size: clamp(34px, 6vw, 56px);
   line-height: 1.02;
   letter-spacing: -0.04em;
@@ -138,9 +138,8 @@ textarea {
 
 .input-field {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: flex-start;
-  gap: 12px;
   min-height: 272px;
   padding: 16px 18px;
   border: 1px solid rgba(16, 24, 39, 0.08);
@@ -153,18 +152,6 @@ textarea {
   border-color: rgba(22, 196, 127, 0.42);
   background: #ffffff;
   box-shadow: 0 0 0 4px var(--accent-soft);
-}
-
-.input-icon {
-  display: inline-grid;
-  place-items: center;
-  color: #94a3b8;
-  margin-top: 14px;
-}
-
-.input-icon svg {
-  width: 22px;
-  height: 22px;
 }
 
 input[type="text"],
@@ -211,8 +198,8 @@ textarea:focus {
   background: var(--ink);
   color: white;
   font-weight: 800;
-  min-width: 150px;
-  padding: 0 24px;
+  min-width: 128px;
+  padding: 0 18px;
   min-height: 64px;
   margin-top: 8px;
   cursor: pointer;
@@ -245,6 +232,29 @@ textarea:focus {
 .query-tip {
   text-align: center;
   font-size: 14px;
+}
+
+.footer-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 2px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.footer-label {
+  color: #5f77a4;
+}
+
+.footer-link {
+  color: #23ceb3;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
 }
 
 .result-card {
@@ -350,5 +360,11 @@ textarea:focus {
   .primary-button {
     width: 100%;
     min-width: 0;
+  }
+
+  .footer-note {
+    flex-direction: column;
+    gap: 6px;
+    font-size: 16px;
   }
 }
