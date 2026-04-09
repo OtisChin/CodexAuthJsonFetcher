@@ -86,7 +86,7 @@ async function handleSingleQuery(request, env) {
     filename: record.latest.originalFilename,
     uploadedAt: record.latest.uploadedAt,
     timestamp: record.latest.timestamp,
-    downloadUrl: buildDownloadUrl(request.url, record.latest.storageKey, record.latest.originalFilename),
+    downloadUrl: buildRecordDownloadUrl(request.url, record),
   });
 }
 
@@ -158,7 +158,7 @@ async function handleBatchQuery(request, env) {
       normalizedEmail: found[0].normalizedEmail,
       filename: latest.originalFilename,
       missing,
-      downloadUrl: buildDownloadUrl(request.url, latest.storageKey, latest.originalFilename),
+      downloadUrl: buildRecordDownloadUrl(request.url, found[0].record),
     });
   }
 
@@ -166,7 +166,13 @@ async function handleBatchQuery(request, env) {
   const packedFiles = [];
 
   for (const item of found) {
-    const object = await env.AUTH_BUCKET.get(item.record.latest.storageKey);
+    const storageKey = getRecordStorageKey(item.record);
+    if (!storageKey) {
+      missing.push(item.email);
+      continue;
+    }
+
+    const object = await env.AUTH_BUCKET.get(storageKey);
     if (!object) {
       missing.push(item.email);
       continue;
@@ -395,8 +401,8 @@ async function handleAdminUpload(request, env) {
 }
 
 async function handleDownload(url, env) {
-  const storageKey = url.searchParams.get("key") || "";
-  if (!storageKey.startsWith("json/") && !storageKey.startsWith("batches/")) {
+  const storageKey = normalizeDownloadKey(url.searchParams.get("key"));
+  if (!storageKey) {
     return jsonResponse({ error: "invalid_key", message: "下载地址无效。" }, 400);
   }
 
@@ -543,6 +549,42 @@ function buildDownloadUrl(requestUrl, storageKey, filename) {
   url.searchParams.set("key", storageKey);
   url.searchParams.set("download", filename);
   return url.toString();
+}
+
+function buildRecordDownloadUrl(requestUrl, record) {
+  const storageKey = getRecordStorageKey(record);
+  const filename =
+    record?.latest?.originalFilename ||
+    record?.latest?.filename ||
+    record?.files?.[0]?.originalFilename ||
+    "download.json";
+
+  if (!storageKey) {
+    return null;
+  }
+
+  return buildDownloadUrl(requestUrl, storageKey, filename);
+}
+
+function getRecordStorageKey(record) {
+  return normalizeDownloadKey(
+    record?.latest?.storageKey ||
+      record?.latest?.key ||
+      record?.latest?.r2Key ||
+      record?.files?.[0]?.storageKey ||
+      record?.files?.[0]?.key ||
+      record?.files?.[0]?.r2Key ||
+      "",
+  );
+}
+
+function normalizeDownloadKey(storageKey) {
+  const value = String(storageKey || "").trim().replace(/^\/+/, "");
+  if (!value || value.includes("..") || /[\r\n]/.test(value)) {
+    return null;
+  }
+
+  return value;
 }
 
 function buildContentDisposition(filename) {
