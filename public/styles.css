@@ -80,7 +80,7 @@ textarea {
 
 .hero-copy h1 {
   margin: 0;
-  font-size: clamp(40px, 7vw, 66px);
+  font-size: clamp(34px, 6vw, 56px);
   line-height: 1.02;
   letter-spacing: -0.04em;
 }
@@ -130,7 +130,7 @@ textarea {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  padding: 18px;
+  padding: 20px;
   border-radius: 30px;
   background: #ffffff;
   box-shadow: 0 20px 42px rgba(16, 24, 39, 0.08);
@@ -141,8 +141,8 @@ textarea {
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  min-height: 66px;
-  padding: 0 16px;
+  min-height: 82px;
+  padding: 0 18px;
   border: 1px solid rgba(16, 24, 39, 0.08);
   border-radius: 20px;
   background: #f6f8fc;
@@ -187,13 +187,14 @@ textarea {
 }
 
 #query-input {
-  min-height: 30px;
-  max-height: 190px;
+  min-height: 46px;
+  max-height: 220px;
   resize: vertical;
   border: 0;
   background: transparent;
   box-shadow: none;
-  padding: 18px 0 18px 0;
+  padding: 20px 0;
+  font-size: 18px;
 }
 
 input:focus,
@@ -211,7 +212,7 @@ textarea:focus {
   font-weight: 800;
   min-width: 176px;
   padding: 0 30px;
-  min-height: 60px;
+  min-height: 64px;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
@@ -237,6 +238,11 @@ textarea:focus {
   font-size: 13px;
   line-height: 1.7;
   color: var(--muted);
+}
+
+.query-tip {
+  text-align: center;
+  font-size: 14px;
 }
 
 .result-card {
