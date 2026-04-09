@@ -80,7 +80,7 @@ textarea {
 
 .hero-copy h1 {
   margin: 10px 0 0;
-  font-size: clamp(30px, 5.5vw, 48px);
+  font-size: clamp(26px, 4.8vw, 42px);
   line-height: 1.02;
   letter-spacing: -0.04em;
 }
@@ -140,7 +140,7 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: flex-start;
-  min-height: 272px;
+  min-height: 232px;
   padding: 16px 18px;
   border: 1px solid rgba(16, 24, 39, 0.08);
   border-radius: 20px;
@@ -175,7 +175,7 @@ textarea {
 }
 
 #query-input {
-  min-height: 220px;
+  min-height: 180px;
   max-height: 420px;
   resize: vertical;
   border: 0;
@@ -240,7 +240,7 @@ textarea:focus {
   justify-content: center;
   gap: 14px;
   margin-top: 2px;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
 }
 
@@ -365,6 +365,6 @@ textarea:focus {
   .footer-note {
     flex-direction: column;
     gap: 6px;
-    font-size: 14px;
+    font-size: 13px;
   }
 }

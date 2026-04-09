@@ -246,6 +246,8 @@ async function handleBatchQuery(request, env) {
   const zipBytes = zipSync(entries, { level: 6 });
   const batchFilename = `auth-json-batch-${Date.now()}.zip`;
   const batchStorageKey = `batches/${Date.now()}-${crypto.randomUUID()}.zip`;
+  const batchDownloadToken = crypto.randomUUID();
+  const batchTtlSeconds = Number(env.BATCH_ZIP_TTL_SECONDS || 86400);
 
   await authBucket.put(batchStorageKey, zipBytes, {
     httpMetadata: {
@@ -254,10 +256,20 @@ async function handleBatchQuery(request, env) {
     },
     customMetadata: {
       generatedAt: new Date().toISOString(),
-      ttlSeconds: String(Number(env.BATCH_ZIP_TTL_SECONDS || 86400)),
+      ttlSeconds: String(batchTtlSeconds),
       itemCount: String(packedFiles.length),
     },
   });
+
+  await getAuthIndex(env).put(
+    buildBatchDownloadKey(batchDownloadToken),
+    JSON.stringify({
+      storageKey: batchStorageKey,
+      filename: batchFilename,
+      createdAt: new Date().toISOString(),
+    }),
+    { expirationTtl: batchTtlSeconds },
+  );
 
   return jsonResponse({
     ok: true,
@@ -265,7 +277,7 @@ async function handleBatchQuery(request, env) {
     count: packedFiles.length,
     missing,
     filename: batchFilename,
-    downloadUrl: buildDownloadUrl(request.url, batchStorageKey, batchFilename),
+    downloadUrl: buildDownloadUrl(request.url, batchStorageKey, batchFilename, batchDownloadToken),
     files: packedFiles,
   });
 }
@@ -482,6 +494,7 @@ async function handleAdminDebugEmail(request, env, url) {
 
 async function handleDownload(url, env) {
   const storageKey = normalizeDownloadKey(url.searchParams.get("key"));
+  const batchToken = normalizeBatchDownloadToken(url.searchParams.get("token"));
   if (!storageKey) {
     return jsonResponse({ error: "invalid_key", message: "下载地址无效。" }, 400);
   }
@@ -490,9 +503,20 @@ async function handleDownload(url, env) {
     url.searchParams.get("download") || storageKey.split("/").pop() || "download.json",
   );
   const authBucket = getAuthBucket(env);
-  let object = await authBucket.get(storageKey);
+  let resolvedStorageKey = storageKey;
+  let object = await getDownloadObject(authBucket, storageKey);
+
+  if (!object && batchToken) {
+    const batchTicket = await getBatchDownloadTicket(env, batchToken);
+    const ticketStorageKey = normalizeDownloadKey(batchTicket?.storageKey);
+    if (ticketStorageKey) {
+      resolvedStorageKey = ticketStorageKey;
+      object = await getDownloadObject(authBucket, ticketStorageKey);
+    }
+  }
+
   if (!object) {
-    const recovered = await recoverDownloadObject(env, filename, storageKey);
+    const recovered = await recoverDownloadObject(env, filename, resolvedStorageKey);
     if (recovered) {
       object = recovered.object;
       await syncRecoveredStorageKey(
@@ -591,6 +615,10 @@ function buildIndexKey(normalizedEmail) {
   return `idx:${encodeURIComponent(normalizedEmail)}`;
 }
 
+function buildBatchDownloadKey(token) {
+  return `batch:${token}`;
+}
+
 async function getIndexRecord(env, normalizedEmail) {
   if (!normalizedEmail) {
     return null;
@@ -658,6 +686,17 @@ async function recoverStorageKeyFromBucket(env, normalizedEmail, record) {
 
 function getRecordNormalizedEmail(record) {
   return record?.normalizedEmail || null;
+}
+
+async function getDownloadObject(authBucket, storageKey) {
+  for (const candidate of getDownloadKeyCandidates(storageKey)) {
+    const object = await authBucket.get(candidate);
+    if (object) {
+      return object;
+    }
+  }
+
+  return null;
 }
 
 async function recoverDownloadObject(env, filename, fallbackStorageKey) {
@@ -784,12 +823,15 @@ function groupBy(items, keySelector) {
   }, {});
 }
 
-function buildDownloadUrl(requestUrl, storageKey, filename) {
+function buildDownloadUrl(requestUrl, storageKey, filename, token = null) {
   const url = new URL(requestUrl);
   url.pathname = "/api/download";
   url.search = "";
   url.searchParams.set("key", storageKey);
   url.searchParams.set("download", filename);
+  if (token) {
+    url.searchParams.set("token", token);
+  }
   return url.toString();
 }
 
@@ -833,6 +875,50 @@ function normalizeDownloadKey(storageKey) {
   }
 
   return value;
+}
+
+function getDownloadKeyCandidates(storageKey) {
+  const candidates = [
+    normalizeDownloadKey(storageKey),
+    normalizeDownloadKey(safeDecodeURIComponent(storageKey)),
+  ].filter(Boolean);
+
+  return [...new Set(candidates)];
+}
+
+function safeDecodeURIComponent(value) {
+  try {
+    return decodeURIComponent(String(value || ""));
+  } catch {
+    return String(value || "");
+  }
+}
+
+function normalizeBatchDownloadToken(token) {
+  const value = String(token || "").trim();
+  if (!/^[a-zA-Z0-9-]{16,128}$/.test(value)) {
+    return null;
+  }
+
+  return value;
+}
+
+async function getBatchDownloadTicket(env, token) {
+  if (!token) {
+    return null;
+  }
+
+  const authIndex = getAuthIndex(env);
+  const raw = await authIndex.get(buildBatchDownloadKey(token));
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function buildContentDisposition(filename) {
