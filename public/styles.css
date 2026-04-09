@@ -36,17 +36,16 @@ textarea {
 
 .page-shell {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 40px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px 56px;
 }
 
-.hero-card {
-  width: min(1120px, 100%);
+.hero-stack {
+  width: min(980px, 100%);
   display: grid;
-  grid-template-columns: minmax(280px, 420px) minmax(320px, 1fr);
-  gap: 32px;
-  align-items: stretch;
+  gap: 28px;
 }
 
 .hero-copy,
@@ -59,10 +58,12 @@ textarea {
 }
 
 .hero-copy {
-  padding: 42px 36px;
+  padding: 56px 36px 44px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
 }
 
 .brand-badge {
@@ -81,38 +82,30 @@ textarea {
   height: 34px;
 }
 
-.eyebrow {
-  margin: 24px 0 12px;
-  color: var(--accent);
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
 .hero-copy h1 {
   margin: 0;
-  font-size: clamp(38px, 5vw, 62px);
-  line-height: 0.98;
+  font-size: clamp(42px, 7vw, 72px);
+  line-height: 1.02;
   letter-spacing: -0.04em;
 }
 
 .subcopy {
-  margin: 18px 0 0;
+  margin: 0;
+  max-width: 640px;
   font-size: 16px;
   line-height: 1.8;
   color: var(--muted);
 }
 
 .panel {
-  padding: 18px;
+  padding: 16px;
 }
 
 .tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 18px;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(140px, 180px));
+  gap: 12px;
+  margin: 0 auto 18px;
 }
 
 .tab {
@@ -137,7 +130,7 @@ textarea {
 
 .tab-panel {
   display: none;
-  padding: 26px;
+  padding: 28px;
   border-radius: 22px;
   background: var(--panel-strong);
   border: 1px solid rgba(16, 24, 39, 0.05);
@@ -161,8 +154,9 @@ textarea {
 
 .input-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
+  align-items: center;
 }
 
 input[type="text"],
@@ -181,7 +175,14 @@ textarea {
 
 textarea {
   resize: vertical;
-  min-height: 220px;
+  min-height: 74px;
+  line-height: 1.5;
+}
+
+#query-input {
+  min-height: 74px;
+  max-height: 210px;
+  resize: vertical;
 }
 
 input:focus,
@@ -303,10 +304,6 @@ textarea:focus {
 }
 
 @media (max-width: 960px) {
-  .hero-card {
-    grid-template-columns: 1fr;
-  }
-
   .hero-copy,
   .panel {
     border-radius: 24px;
@@ -327,6 +324,10 @@ textarea:focus {
   .tabs,
   .input-row {
     grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    width: 100%;
   }
 
   .primary-button {

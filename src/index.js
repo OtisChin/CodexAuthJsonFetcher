@@ -175,13 +175,39 @@ async function handleBatchQuery(request, env) {
   const authBucket = getAuthBucket(env);
 
   for (const item of found) {
-    const storageKey = getRecordStorageKey(item.record);
+    let storageKey = getRecordStorageKey(item.record);
     if (!storageKey) {
-      missing.push(item.email);
-      continue;
+      storageKey = await recoverStorageKeyFromBucket(env, item.normalizedEmail, item.record);
+      if (!storageKey) {
+        missing.push(item.email);
+        continue;
+      }
     }
 
-    const object = await authBucket.get(storageKey);
+    let object = await authBucket.get(storageKey);
+    if (!object) {
+      const recoveredStorageKey = await recoverStorageKeyFromBucket(env, item.normalizedEmail, item.record);
+      if (!recoveredStorageKey) {
+        missing.push(item.email);
+        continue;
+      }
+
+      storageKey = recoveredStorageKey;
+      object = await authBucket.get(storageKey);
+      if (!object) {
+        missing.push(item.email);
+        continue;
+      }
+
+      await syncRecoveredStorageKey(
+        env,
+        item.normalizedEmail,
+        storageKey,
+        getRecordFilename(item.record),
+        item.record?.latest?.timestamp || item.record?.files?.[0]?.timestamp || null,
+      );
+    }
+
     if (!object) {
       missing.push(item.email);
       continue;
@@ -582,50 +608,14 @@ async function resolveIndexRecord(env, normalizedEmail) {
   if (!record?.latest && !record?.files?.length) {
     return record;
   }
-
-  const storageKey = getRecordStorageKey(record);
-  const authBucket = getAuthBucket(env);
-
-  if (storageKey) {
-    const existingObject = await authBucket.head(storageKey);
-    if (existingObject) {
-      return record;
-    }
-  }
-
-  const recoveredStorageKey = await recoverStorageKeyFromBucket(env, normalizedEmail, record);
-  if (!recoveredStorageKey) {
+  if (record.normalizedEmail === normalizedEmail) {
     return record;
   }
 
-  const filename = getRecordFilename(record);
-  const latest = {
-    ...(record.latest || {}),
-    originalFilename: filename,
-    filename,
-    storageKey: recoveredStorageKey,
-  };
-
-  const files = Array.isArray(record.files) ? [...record.files] : [];
-  if (files.length) {
-    files[0] = {
-      ...files[0],
-      originalFilename: files[0].originalFilename || filename,
-      storageKey: recoveredStorageKey,
-    };
-  }
-
-  const updatedRecord = {
+  return {
     ...record,
     normalizedEmail,
-    latest,
-    files,
-    updatedAt: new Date().toISOString(),
   };
-
-  const authIndex = getAuthIndex(env);
-  await authIndex.put(buildIndexKey(normalizedEmail), JSON.stringify(updatedRecord));
-  return updatedRecord;
 }
 
 async function recoverStorageKeyFromBucket(env, normalizedEmail, record) {

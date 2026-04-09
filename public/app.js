@@ -1,16 +1,13 @@
 const tabs = Array.from(document.querySelectorAll("[data-tab-target]"));
 const panels = Array.from(document.querySelectorAll(".tab-panel"));
 
-const singleForm = document.querySelector("#single-form");
-const batchForm = document.querySelector("#batch-form");
+const queryForm = document.querySelector("#query-form");
 const adminForm = document.querySelector("#admin-form");
 
-const singleResult = document.querySelector("#single-result");
-const batchResult = document.querySelector("#batch-result");
+const queryResult = document.querySelector("#query-result");
 const adminResult = document.querySelector("#admin-result");
 
-setEmptyState(singleResult, "输入邮箱后即可返回对应 JSON 下载地址。");
-setEmptyState(batchResult, "多个邮箱会自动打包成 ZIP，并返回下载链接。");
+setEmptyState(queryResult, "输入一个邮箱返回 JSON，多行邮箱会自动打包为 ZIP。");
 setEmptyState(adminResult, "管理员上传后，系统会自动抽取 JSON 并建立邮箱索引。");
 
 for (const tab of tabs) {
@@ -21,54 +18,13 @@ for (const tab of tabs) {
   });
 }
 
-singleForm.addEventListener("submit", async (event) => {
+queryForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const submitButton = singleForm.querySelector("button[type='submit']");
-  const input = singleForm.querySelector("input[name='input']").value.trim();
+  const submitButton = queryForm.querySelector("button[type='submit']");
+  const input = queryForm.querySelector("textarea[name='input']").value.trim();
 
   if (!input) {
-    renderError(singleResult, "请输入邮箱。");
-    return;
-  }
-
-  toggleLoading(submitButton, true, "查询中...");
-
-  try {
-    const response = await fetch("/api/query/single", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input }),
-    });
-    const payload = await response.json();
-
-    if (!response.ok) {
-      throw new Error(payload.message || "查询失败。");
-    }
-
-    renderSuccess(singleResult, {
-      title: "查询完成",
-      lines: [
-        `匹配邮箱：${payload.email}`,
-        `索引键：${payload.normalizedEmail}`,
-        `文件名：${payload.filename}`,
-      ],
-      link: payload.downloadUrl,
-      linkLabel: "下载 JSON 文件",
-    });
-  } catch (error) {
-    renderError(singleResult, error.message || "查询失败。");
-  } finally {
-    toggleLoading(submitButton, false, "立即查询");
-  }
-});
-
-batchForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const submitButton = batchForm.querySelector("button[type='submit']");
-  const input = batchForm.querySelector("textarea[name='input']").value.trim();
-
-  if (!input) {
-    renderError(batchResult, "请至少输入一个邮箱。");
+    renderError(queryResult, "请输入邮箱。");
     return;
   }
 
@@ -83,11 +39,12 @@ batchForm.addEventListener("submit", async (event) => {
     const payload = await response.json();
 
     if (!response.ok) {
-      throw new Error(payload.message || "批量查询失败。");
+      throw new Error(payload.message || "查询失败。");
     }
 
     const lines = [];
     if (payload.mode === "single") {
+      lines.push(`匹配邮箱：${payload.email}`);
       lines.push(`仅命中 1 个文件：${payload.filename}`);
     } else {
       lines.push(`打包文件数：${payload.count}`);
@@ -98,7 +55,7 @@ batchForm.addEventListener("submit", async (event) => {
       lines.push(`未命中：${payload.missing.length} 个`);
     }
 
-    renderSuccess(batchResult, {
+    renderSuccess(queryResult, {
       title: payload.mode === "single" ? "查询完成" : "批量打包完成",
       lines,
       link: payload.downloadUrl,
@@ -106,9 +63,9 @@ batchForm.addEventListener("submit", async (event) => {
       pills: payload.missing || [],
     });
   } catch (error) {
-    renderError(batchResult, error.message || "批量查询失败。");
+    renderError(queryResult, error.message || "查询失败。");
   } finally {
-    toggleLoading(submitButton, false, "批量生成下载包");
+    toggleLoading(submitButton, false, "立即查询");
   }
 });
 
