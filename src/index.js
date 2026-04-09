@@ -71,7 +71,7 @@ async function handleSingleQuery(request, env) {
   }
 
   const normalizedEmail = normalizeEmail(email);
-  const record = await getIndexRecord(env, normalizedEmail);
+  const record = await resolveIndexRecord(env, normalizedEmail);
 
   if (!record?.latest) {
     return jsonResponse(
@@ -85,7 +85,7 @@ async function handleSingleQuery(request, env) {
     mode: "single",
     email,
     normalizedEmail,
-    filename: record.latest.originalFilename,
+    filename: getRecordFilename(record),
     uploadedAt: record.latest.uploadedAt,
     timestamp: record.latest.timestamp,
     downloadUrl: buildRecordDownloadUrl(request.url, record),
@@ -132,7 +132,7 @@ async function handleBatchQuery(request, env) {
 
   const lookupResults = await Promise.all(
     normalizedItems.map(async (item) => {
-      const record = await getIndexRecord(env, item.normalizedEmail);
+      const record = await resolveIndexRecord(env, item.normalizedEmail);
       return { ...item, record };
     }),
   );
@@ -158,7 +158,7 @@ async function handleBatchQuery(request, env) {
       mode: "single",
       email: found[0].email,
       normalizedEmail: found[0].normalizedEmail,
-      filename: latest.originalFilename,
+      filename: getRecordFilename(found[0].record),
       missing,
       downloadUrl: buildRecordDownloadUrl(request.url, found[0].record),
     });
@@ -183,7 +183,7 @@ async function handleBatchQuery(request, env) {
 
     const bytes = new Uint8Array(await object.arrayBuffer());
     const dedupedFilename = uniqueFilename(
-      item.record.latest.originalFilename,
+      getRecordFilename(item.record),
       packedFiles.map((file) => file.filename),
     );
 
@@ -519,6 +519,96 @@ async function getIndexRecord(env, normalizedEmail) {
   }
 }
 
+async function resolveIndexRecord(env, normalizedEmail) {
+  const record = await getIndexRecord(env, normalizedEmail);
+  if (!record?.latest && !record?.files?.length) {
+    return record;
+  }
+
+  const storageKey = getRecordStorageKey(record);
+  const authBucket = getAuthBucket(env);
+
+  if (storageKey) {
+    const existingObject = await authBucket.head(storageKey);
+    if (existingObject) {
+      return record;
+    }
+  }
+
+  const recoveredStorageKey = await recoverStorageKeyFromBucket(env, record);
+  if (!recoveredStorageKey) {
+    return record;
+  }
+
+  const filename = getRecordFilename(record);
+  const latest = {
+    ...(record.latest || {}),
+    originalFilename: filename,
+    filename,
+    storageKey: recoveredStorageKey,
+  };
+
+  const files = Array.isArray(record.files) ? [...record.files] : [];
+  if (files.length) {
+    files[0] = {
+      ...files[0],
+      originalFilename: files[0].originalFilename || filename,
+      storageKey: recoveredStorageKey,
+    };
+  }
+
+  const updatedRecord = {
+    ...record,
+    latest,
+    files,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const authIndex = getAuthIndex(env);
+  await authIndex.put(buildIndexKey(normalizedEmail), JSON.stringify(updatedRecord));
+  return updatedRecord;
+}
+
+async function recoverStorageKeyFromBucket(env, record) {
+  const normalizedEmail = record?.normalizedEmail;
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const authBucket = getAuthBucket(env);
+  const prefix = `json/${normalizedEmail}/`;
+  const listing = await authBucket.list({ prefix, limit: 1000 });
+  if (!listing.objects.length) {
+    return null;
+  }
+
+  const expectedFilename = getRecordFilename(record);
+  const expectedTimestamp = record?.latest?.timestamp || record?.files?.[0]?.timestamp || null;
+
+  const candidates = listing.objects.filter((object) => {
+    if (expectedTimestamp && object.key.startsWith(`${prefix}${expectedTimestamp}-`)) {
+      return true;
+    }
+
+    if (expectedFilename && object.key.endsWith(`-${expectedFilename}`)) {
+      return true;
+    }
+
+    return false;
+  });
+
+  const selectedObject = sortObjectsByUploaded(candidates)[0] || sortObjectsByUploaded(listing.objects)[0];
+  return selectedObject?.key || null;
+}
+
+function sortObjectsByUploaded(objects) {
+  return [...objects].sort((left, right) => {
+    const leftTime = left.uploaded ? new Date(left.uploaded).getTime() : 0;
+    const rightTime = right.uploaded ? new Date(right.uploaded).getTime() : 0;
+    return rightTime - leftTime;
+  });
+}
+
 function mergeHistory(existingFiles, incomingFiles) {
   const merged = [...incomingFiles, ...existingFiles];
   const deduped = new Map();
@@ -559,11 +649,7 @@ function buildDownloadUrl(requestUrl, storageKey, filename) {
 
 function buildRecordDownloadUrl(requestUrl, record) {
   const storageKey = getRecordStorageKey(record);
-  const filename =
-    record?.latest?.originalFilename ||
-    record?.latest?.filename ||
-    record?.files?.[0]?.originalFilename ||
-    "download.json";
+  const filename = getRecordFilename(record);
 
   if (!storageKey) {
     return null;
@@ -581,6 +667,16 @@ function getRecordStorageKey(record) {
       record?.files?.[0]?.key ||
       record?.files?.[0]?.r2Key ||
       "",
+  );
+}
+
+function getRecordFilename(record) {
+  return (
+    record?.latest?.originalFilename ||
+    record?.latest?.filename ||
+    record?.files?.[0]?.originalFilename ||
+    record?.files?.[0]?.filename ||
+    "download.json"
   );
 }
 
