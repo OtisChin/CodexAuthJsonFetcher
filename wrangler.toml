@@ -8,3 +8,12 @@ keep_vars = true
 [assets]
 binding = "ASSETS"
 directory = "./public"
+
+# R2/KV are bindings, not normal environment variables.
+[[kv_namespaces]]
+binding = "AUTH_INDEX"
+id = "524366f6be1441409130db5c5d56ddf3"
+
+[[r2_buckets]]
+binding = "AUTH_BUCKET"
+bucket_name = "codex-auth-files"

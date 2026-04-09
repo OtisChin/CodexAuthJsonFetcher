@@ -45,11 +45,11 @@
 
 ## Cloudflare 准备步骤
 
-这个项目已经调整成“Cloudflare Dashboard 为主配置”：
+这个项目当前采用“bindings 写在仓库，变量写在 Dashboard”的配置方式：
 
-- [wrangler.toml](/D:/code/my/CodexAuthJsonFetcher/wrangler.toml) 只保留 Worker 基础配置
-- R2 和 KV 不再写死在仓库里
-- 业务参数和管理员口令在 Cloudflare 控制台配置
+- [wrangler.toml](/D:/code/my/CodexAuthJsonFetcher/wrangler.toml) 保留 Worker 基础配置以及 R2/KV bindings
+- R2 和 KV 必须写在 `wrangler.toml`，否则 `wrangler deploy` 会把线上 bindings 清掉
+- 业务参数和管理员口令继续放在 Cloudflare 控制台配置
 - `keep_vars = true` 已开启，避免部署时覆盖控制台变量
 
 建议在 R2 后台为 `batches/` 前缀增加生命周期规则，例如 1 天自动删除，避免批量压缩包长期堆积。
@@ -64,7 +64,7 @@
 4. 选择 `Create application`。
 5. 选择 `Import a repository`，连接你的 GitHub 仓库。
 6. 仓库导入时，项目名称尽量保持和 `wrangler.toml` 里的 `name` 一致，也就是 `codex-auth-json-fetcher`。
-7. 导入完成后，再分别创建并绑定 R2、KV、环境变量和 Secret。
+7. 导入完成后，再分别创建资源，并确认 `wrangler.toml` 里的 R2/KV bindings 指向正确资源。
 
 网页端资源配置路径：
 
@@ -72,8 +72,8 @@
   - Dashboard -> `R2 Object Storage` -> `Create bucket`
 - 创建 KV namespace
   - Dashboard -> `Workers KV` -> `Create instance`
-- 绑定到 Worker
-  - Dashboard -> `Workers & Pages` -> 你的 Worker -> `Settings` -> `Bindings`
+- 检查或补充变量与密钥
+  - Dashboard -> `Workers & Pages` -> 你的 Worker -> `Settings` -> `Variables and Secrets`
 - 添加管理员口令
   - Dashboard -> `Workers & Pages` -> 你的 Worker -> `Settings` -> `Variables and Secrets`
 
@@ -81,6 +81,8 @@
 
 - `AUTH_BUCKET`、`AUTH_INDEX`
   - 这两个不是普通环境变量，而是 Cloudflare Bindings
+  - 它们已经写在 [wrangler.toml](/D:/code/my/CodexAuthJsonFetcher/wrangler.toml)
+  - 后续如果换 bucket 或 namespace，需要同步修改配置文件
 - `ADMIN_TOKEN`、`MAX_BATCH_ITEMS` 这些
   - 才是 Variables / Secrets
 
