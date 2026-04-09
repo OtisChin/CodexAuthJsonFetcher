@@ -3,23 +3,8 @@
 name = "codex-auth-json-fetcher"
 main = "src/index.js"
 compatibility_date = "2026-04-09"
+keep_vars = true
 
 [assets]
 binding = "ASSETS"
 directory = "./public"
-
-[[kv_namespaces]]
-binding = "AUTH_INDEX"
-id = "524366f6be1441409130db5c5d56ddf3"
-
-[[r2_buckets]]
-binding = "AUTH_BUCKET"
-bucket_name = "codex-auth-files"
-
-[vars]
-MAX_BATCH_ITEMS = "100"
-MAX_HISTORY_ITEMS = "20"
-BATCH_ZIP_TTL_SECONDS = "86400"
-
-[secrets]
-required = ["ADMIN_TOKEN"]

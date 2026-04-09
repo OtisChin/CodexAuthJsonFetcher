@@ -45,27 +45,12 @@
 
 ## Cloudflare 准备步骤
 
-创建 KV：
+这个项目已经调整成“Cloudflare Dashboard 为主配置”：
 
-```bash
-npx wrangler kv namespace create AUTH_INDEX
-npx wrangler kv namespace create AUTH_INDEX --preview
-```
-
-创建 R2：
-
-```bash
-npx wrangler r2 bucket create codex-auth-files
-npx wrangler r2 bucket create codex-auth-files-dev
-```
-
-然后把真实返回值填入 [wrangler.toml](/D:/code/my/CodexAuthJsonFetcher/wrangler.toml)。
-
-设置管理员口令：
-
-```bash
-npx wrangler secret put ADMIN_TOKEN
-```
+- [wrangler.toml](/D:/code/my/CodexAuthJsonFetcher/wrangler.toml) 只保留 Worker 基础配置
+- R2 和 KV 不再写死在仓库里
+- 业务参数和管理员口令在 Cloudflare 控制台配置
+- `keep_vars = true` 已开启，避免部署时覆盖控制台变量
 
 建议在 R2 后台为 `batches/` 前缀增加生命周期规则，例如 1 天自动删除，避免批量压缩包长期堆积。
 
@@ -79,7 +64,7 @@ npx wrangler secret put ADMIN_TOKEN
 4. 选择 `Create application`。
 5. 选择 `Import a repository`，连接你的 GitHub 仓库。
 6. 仓库导入时，项目名称尽量保持和 `wrangler.toml` 里的 `name` 一致，也就是 `codex-auth-json-fetcher`。
-7. 导入完成后，再分别创建并绑定 R2、KV、Secret。
+7. 导入完成后，再分别创建并绑定 R2、KV、环境变量和 Secret。
 
 网页端资源配置路径：
 
@@ -92,17 +77,30 @@ npx wrangler secret put ADMIN_TOKEN
 - 添加管理员口令
   - Dashboard -> `Workers & Pages` -> 你的 Worker -> `Settings` -> `Variables and Secrets`
 
-本项目在网页端需要配置的绑定名必须和代码一致：
+注意，这里要区分两类配置：
 
-- R2 binding: `AUTH_BUCKET`
-- KV binding: `AUTH_INDEX`
-- Secret: `ADMIN_TOKEN`
+- `AUTH_BUCKET`、`AUTH_INDEX`
+  - 这两个不是普通环境变量，而是 Cloudflare Bindings
+- `ADMIN_TOKEN`、`MAX_BATCH_ITEMS` 这些
+  - 才是 Variables / Secrets
 
-可选普通变量：
+本项目在网页端需要配置的名字必须和代码一致：
+
+- R2 Binding：`AUTH_BUCKET`
+- KV Binding：`AUTH_INDEX`
+- Secret：`ADMIN_TOKEN`
+
+可选普通环境变量：
 
 - `MAX_BATCH_ITEMS`
 - `MAX_HISTORY_ITEMS`
 - `BATCH_ZIP_TTL_SECONDS`
+
+推荐值：
+
+- `MAX_BATCH_ITEMS=100`
+- `MAX_HISTORY_ITEMS=20`
+- `BATCH_ZIP_TTL_SECONDS=86400`
 
 ## 本地开发
 
