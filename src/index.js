@@ -19,12 +19,14 @@ export default {
     } catch (error) {
       const isBindingError =
         error instanceof Error && /binding .+ not configured/i.test(error.message);
+      const isAuthError =
+        error instanceof Error && /admin access denied/i.test(error.message);
       return jsonResponse(
         {
-          error: isBindingError ? "config_error" : "server_error",
+          error: isBindingError ? "config_error" : isAuthError ? "unauthorized" : "server_error",
           message: error instanceof Error ? error.message : "Unknown error",
         },
-        isBindingError ? 503 : 500,
+        isBindingError ? 503 : isAuthError ? 401 : 500,
       );
     }
   },
@@ -49,6 +51,10 @@ async function routeApi(request, env, url) {
 
   if (url.pathname === "/api/admin/upload" && request.method === "POST") {
     return handleAdminUpload(request, env);
+  }
+
+  if (url.pathname === "/api/admin/debug-email" && request.method === "GET") {
+    return handleAdminDebugEmail(request, env, url);
   }
 
   if (url.pathname === "/api/download" && request.method === "GET") {
@@ -404,21 +410,73 @@ async function handleAdminUpload(request, env) {
   });
 }
 
+async function handleAdminDebugEmail(request, env, url) {
+  assertAdminAccess(request, env, url);
+
+  const email = extractEmail(url.searchParams.get("email") || "");
+  if (!email) {
+    return jsonResponse(
+      { error: "invalid_email", message: "请提供有效邮箱。" },
+      400,
+    );
+  }
+
+  const normalizedEmail = normalizeEmail(email);
+  const record = await getIndexRecord(env, normalizedEmail);
+  const storageKey = getRecordStorageKey(record);
+  const authBucket = getAuthBucket(env);
+
+  const head = storageKey ? await authBucket.head(storageKey) : null;
+  const directObject = storageKey ? await authBucket.get(storageKey) : null;
+  const prefix = `json/${normalizedEmail}/`;
+  const listing = await authBucket.list({ prefix, limit: 1000 });
+
+  return jsonResponse({
+    ok: true,
+    email,
+    normalizedEmail,
+    storageKey,
+    storageHeadExists: Boolean(head),
+    storageGetExists: Boolean(directObject),
+    record,
+    prefix,
+    listedKeys: listing.objects.map((object) => ({
+      key: object.key,
+      uploaded: object.uploaded,
+      size: object.size,
+    })),
+  });
+}
+
 async function handleDownload(url, env) {
   const storageKey = normalizeDownloadKey(url.searchParams.get("key"));
   if (!storageKey) {
     return jsonResponse({ error: "invalid_key", message: "下载地址无效。" }, 400);
   }
 
+  const filename = sanitizeFilename(
+    url.searchParams.get("download") || storageKey.split("/").pop() || "download.json",
+  );
   const authBucket = getAuthBucket(env);
-  const object = await authBucket.get(storageKey);
+  let object = await authBucket.get(storageKey);
+  if (!object) {
+    const recovered = await recoverDownloadObject(env, filename, storageKey);
+    if (recovered) {
+      object = recovered.object;
+      await syncRecoveredStorageKey(
+        env,
+        recovered.normalizedEmail,
+        recovered.storageKey,
+        recovered.filename,
+        recovered.timestamp,
+      );
+    }
+  }
+
   if (!object) {
     return jsonResponse({ error: "not_found", message: "文件不存在或已过期。" }, 404);
   }
 
-  const filename = sanitizeFilename(
-    url.searchParams.get("download") || storageKey.split("/").pop() || "download.json",
-  );
   const headers = new Headers(corsHeaders());
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
@@ -535,7 +593,7 @@ async function resolveIndexRecord(env, normalizedEmail) {
     }
   }
 
-  const recoveredStorageKey = await recoverStorageKeyFromBucket(env, record);
+  const recoveredStorageKey = await recoverStorageKeyFromBucket(env, normalizedEmail, record);
   if (!recoveredStorageKey) {
     return record;
   }
@@ -559,6 +617,7 @@ async function resolveIndexRecord(env, normalizedEmail) {
 
   const updatedRecord = {
     ...record,
+    normalizedEmail,
     latest,
     files,
     updatedAt: new Date().toISOString(),
@@ -569,14 +628,14 @@ async function resolveIndexRecord(env, normalizedEmail) {
   return updatedRecord;
 }
 
-async function recoverStorageKeyFromBucket(env, record) {
-  const normalizedEmail = record?.normalizedEmail;
-  if (!normalizedEmail) {
+async function recoverStorageKeyFromBucket(env, normalizedEmail, record) {
+  const resolvedEmail = normalizedEmail || record?.normalizedEmail;
+  if (!resolvedEmail) {
     return null;
   }
 
   const authBucket = getAuthBucket(env);
-  const prefix = `json/${normalizedEmail}/`;
+  const prefix = `json/${resolvedEmail}/`;
   const listing = await authBucket.list({ prefix, limit: 1000 });
   if (!listing.objects.length) {
     return null;
@@ -599,6 +658,97 @@ async function recoverStorageKeyFromBucket(env, record) {
 
   const selectedObject = sortObjectsByUploaded(candidates)[0] || sortObjectsByUploaded(listing.objects)[0];
   return selectedObject?.key || null;
+}
+
+function getRecordNormalizedEmail(record) {
+  return record?.normalizedEmail || null;
+}
+
+async function recoverDownloadObject(env, filename, fallbackStorageKey) {
+  const metadata =
+    parseStoredJsonFilename(filename) ||
+    parseStoredJsonFilename(sanitizeFilename(fallbackStorageKey.split("/").pop() || ""));
+  if (!metadata?.normalizedEmail) {
+    return null;
+  }
+
+  const authBucket = getAuthBucket(env);
+  const prefix = `json/${metadata.normalizedEmail}/`;
+  const listing = await authBucket.list({ prefix, limit: 1000 });
+  if (!listing.objects.length) {
+    return null;
+  }
+
+  const candidates = listing.objects.filter((object) => {
+    if (metadata.timestamp && object.key.startsWith(`${prefix}${metadata.timestamp}-`)) {
+      return true;
+    }
+
+    if (filename && object.key.endsWith(`-${filename}`)) {
+      return true;
+    }
+
+    return false;
+  });
+
+  const selectedObject = sortObjectsByUploaded(candidates)[0] || sortObjectsByUploaded(listing.objects)[0];
+  if (!selectedObject?.key) {
+    return null;
+  }
+
+  const object = await authBucket.get(selectedObject.key);
+  if (!object) {
+    return null;
+  }
+
+  return {
+    object,
+    storageKey: selectedObject.key,
+    normalizedEmail: metadata.normalizedEmail,
+    filename,
+    timestamp: metadata.timestamp,
+  };
+}
+
+async function syncRecoveredStorageKey(env, normalizedEmail, storageKey, filename, timestamp) {
+  if (!normalizedEmail || !storageKey) {
+    return;
+  }
+
+  const record = await getIndexRecord(env, normalizedEmail);
+  if (!record) {
+    return;
+  }
+
+  const latest = {
+    ...(record.latest || {}),
+    originalFilename: record?.latest?.originalFilename || filename,
+    filename: record?.latest?.filename || filename,
+    timestamp: record?.latest?.timestamp || timestamp,
+    storageKey,
+  };
+
+  const files = Array.isArray(record.files) ? [...record.files] : [];
+  if (files.length) {
+    files[0] = {
+      ...files[0],
+      originalFilename: files[0].originalFilename || filename,
+      timestamp: files[0].timestamp || timestamp,
+      storageKey,
+    };
+  }
+
+  const authIndex = getAuthIndex(env);
+  await authIndex.put(
+    buildIndexKey(normalizedEmail),
+    JSON.stringify({
+      ...record,
+      normalizedEmail,
+      latest,
+      files,
+      updatedAt: new Date().toISOString(),
+    }),
+  );
 }
 
 function sortObjectsByUploaded(objects) {
@@ -691,6 +841,16 @@ function normalizeDownloadKey(storageKey) {
 
 function buildContentDisposition(filename) {
   return `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
+function assertAdminAccess(request, env, url) {
+  const adminToken =
+    request.headers.get("x-admin-token") ||
+    url.searchParams.get("token") ||
+    "";
+  if (!env.ADMIN_TOKEN || adminToken !== env.ADMIN_TOKEN) {
+    throw new Error("Admin access denied.");
+  }
 }
 
 function getAuthIndex(env) {
